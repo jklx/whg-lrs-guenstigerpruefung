@@ -30,18 +30,24 @@
 	});
 
 	let schnitt = $derived(schnittBerechnen(schriftlicheNoten, muendlicheNoten, gewichtungen));
+	let originalSchnitt = $derived(schnittBerechnen(schriftlicheNoten, muendlicheNoten));
 	$inspect(muendlicheNoten, gewichtungen);
 
 	function schnittBerechnen(
 		schriftlicheNoten: number[],
 		muendlicheNoten: number[],
-		gewichtungen: (null | 1 | 2)[]
+		gewichtungen?: (null | 1 | 2)[]
 	) {
 		let summe = schriftlicheNoten.reduce((prev, cur) => prev + cur, 0);
 		let divisor = schriftlicheNoten.filter((number) => number).length;
 
-		summe += muendlicheNoten.reduce((prev, cur, i) => prev + cur * Number(gewichtungen[i]), 0);
-		divisor += gewichtungen.reduce((prev, cur) => prev + Number(cur), 0);
+		if (gewichtungen !== undefined) {
+			summe += muendlicheNoten.reduce((prev, cur, i) => prev + cur * Number(gewichtungen[i]), 0);
+			divisor += gewichtungen.reduce((prev, cur) => prev + Number(cur), 0);
+		} else {
+			summe += muendlicheNoten.reduce((prev, cur) => prev + cur, 0);
+			divisor += muendlicheNoten.filter((number) => number).length;
+		}
 
 		return summe / divisor;
 	}
@@ -58,7 +64,7 @@
 <small>Schulaufgabennoten nicht eingeben!</small>
 
 <div class="schriftlicheNoten">
-	Schriftliche kleine Leistungsnachweise: <br />
+	Schriftliche kleine Leistungsnachweise: (Exen, Tests, ...) <br />
 	{#each schriftlicheNoten as note, i}
 		<div class="schriftlicheNote">
 			<input type="number" min="1" max="6" step="1" bind:value={schriftlicheNoten[i]} />
@@ -67,7 +73,7 @@
 </div>
 
 <div class="muendlicheNoten">
-	Mündliche kleine Leistungsnachweise:<br />
+	Mündliche kleine Leistungsnachweise: (Abfragen, UB-Noten, ...)<br />
 	<table>
 		<tbody>
 			<tr>
@@ -87,7 +93,14 @@
 </div>
 
 <p>
-	Schnitt der kleinen Leistungnachweise: <b>
+	<span class="schnittLabel">Schnitt der kleinen Leistungnachweise ohne Doppeltgewichtung:</span>
+		{originalSchnitt.toLocaleString(undefined, {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2
+		})}
+	<br>
+	<span class="schnittLabel">Schnitt der kleinen Leistungnachweise mit Günstigerprüfung:</span>
+	<b>
 		{schnitt.toLocaleString(undefined, {
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2
@@ -102,6 +115,10 @@
 	td {
 		padding: 0;
 		text-align: center;
+	}
+
+	tr.gewichtungen td {
+		height: 53px;
 	}
 
 	td.doppelt div {
@@ -129,5 +146,10 @@
 
 	div.schriftlicheNote {
 		display: inline-block;
+	}
+
+	span.schnittLabel {
+		display: inline-block;
+		width: 500px;
 	}
 </style>
