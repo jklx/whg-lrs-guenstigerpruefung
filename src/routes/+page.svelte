@@ -1,7 +1,9 @@
 <script lang="ts">
 	const maxNumber = 12;
-	let schriftlicheNoten = $state(Array(maxNumber));
-	let muendlicheNoten = $state(Array(maxNumber));
+	let schriftlicheNotenEingabe = $state(Array(maxNumber));
+	let muendlicheNotenEingabe = $state(Array(maxNumber));
+	let schriftlicheNoten = $derived(schriftlicheNotenEingabe.map(note => Number(note.replace(/^[\s+-]+|[\s+-]+$/g, ''))))
+	let muendlicheNoten = $derived(muendlicheNotenEingabe.map(note => Number(note.replace(/^[\s+-]+|[\s+-]+$/g, ''))))
 
 	let gewichtungen = $derived.by(() => {
 		let gewichtungen: (null | 1 | 2)[] = muendlicheNoten.map((note) => (note ? 1 : null));
@@ -31,7 +33,7 @@
 
 	let schnitt = $derived(schnittBerechnen(schriftlicheNoten, muendlicheNoten, gewichtungen));
 	let originalSchnitt = $derived(schnittBerechnen(schriftlicheNoten, muendlicheNoten));
-	$inspect(muendlicheNoten, gewichtungen);
+	$inspect(muendlicheNotenEingabe, muendlicheNoten);
 
 	function schnittBerechnen(
 		schriftlicheNoten: number[],
@@ -65,9 +67,9 @@
 
 <div class="schriftlicheNoten">
 	Schriftliche kleine Leistungsnachweise: (Exen, Tests, ...) <br />
-	{#each schriftlicheNoten as note, i}
+	{#each schriftlicheNotenEingabe as note, i}
 		<div class="schriftlicheNote">
-			<input type="number" min="1" max="6" step="1" bind:value={schriftlicheNoten[i]} />
+			<input type="text" size="2" bind:value={schriftlicheNotenEingabe[i]} />
 		</div>
 	{/each}
 </div>
@@ -77,8 +79,8 @@
 	<table>
 		<tbody>
 			<tr>
-				{#each muendlicheNoten as note, i}
-					<td><input type="number" min="1" max="6" step="1" bind:value={muendlicheNoten[i]} /></td>
+				{#each muendlicheNotenEingabe as note, i}
+					<td><input type="text" size="2" bind:value={muendlicheNotenEingabe[i]} /></td>
 				{/each}
 			</tr>
 			<tr class="gewichtungen">
