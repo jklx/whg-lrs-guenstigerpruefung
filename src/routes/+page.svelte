@@ -1,27 +1,31 @@
 <script lang="ts">
 	const maxNumber = 12;
+	let oberstufe = $state(false);
 	let schriftlicheNotenEingabe = $state(Array(maxNumber));
 	let muendlicheNotenEingabe = $state(Array(maxNumber));
-	let schriftlicheNoten = $derived(schriftlicheNotenEingabe.map(note => Number(note.replace(/^[\s+-]+|[\s+-]+$/g, ''))))
-	let muendlicheNoten = $derived(muendlicheNotenEingabe.map(note => Number(note.replace(/^[\s+-]+|[\s+-]+$/g, ''))))
+	let schriftlicheNoten = $derived(
+		schriftlicheNotenEingabe.map((note) => eingabeAuwerten(note)).filter((note) => note !== undefined)
+	);
+	let muendlicheNoten = $derived(
+		muendlicheNotenEingabe.map((note) => eingabeAuwerten(note)).filter((note) => note !== undefined)
+	);
 
 	let gewichtungen = $derived.by(() => {
-		let gewichtungen: (null | 1 | 2)[] = muendlicheNoten.map((note) => (note ? 1 : null));
+		let gewichtungen: (null | 1 | 2)[] = muendlicheNoten.map(() => 1);
 		let indizesNochZuGewichten = muendlicheNoten
-			.map((note, index) => index)
-			.filter((index) => muendlicheNoten[index]);
+			.map((note, index) => index);
 
 		while (indizesNochZuGewichten.length) {
 			let aktuellerSchnitt = schnittBerechnen(schriftlicheNoten, muendlicheNoten, gewichtungen);
 			let notenNochZuGewichten: Array<number> = indizesNochZuGewichten.map(
 				(index) => muendlicheNoten[index]
 			);
-			let besteNote = Math.min(...notenNochZuGewichten);
+			let besteNote = findeBesteNote(notenNochZuGewichten);
 			let indexDerBestenNote = muendlicheNoten.findIndex(
 				(el, i) => el === besteNote && indizesNochZuGewichten.includes(i)
 			);
 
-			if (besteNote < aktuellerSchnitt) {
+			if (istNoteBesserAlsSchnitt(besteNote, aktuellerSchnitt)) {
 				gewichtungen[indexDerBestenNote] = 2;
 				indizesNochZuGewichten = indizesNochZuGewichten.filter((i) => i !== indexDerBestenNote);
 			} else {
@@ -33,7 +37,22 @@
 
 	let schnitt = $derived(schnittBerechnen(schriftlicheNoten, muendlicheNoten, gewichtungen));
 	let originalSchnitt = $derived(schnittBerechnen(schriftlicheNoten, muendlicheNoten));
-	$inspect(muendlicheNotenEingabe, muendlicheNoten);
+
+	function findeBesteNote(noten: number[]) {
+		if (oberstufe) {
+			return Math.max(...noten);
+		} else {
+			return Math.min(...noten);
+		}
+	}
+
+	function istNoteBesserAlsSchnitt(note: number, schnitt: number) {
+		if (oberstufe) {
+			return note > schnitt;
+		} else {
+			return note < schnitt;
+		}
+	}
 
 	function schnittBerechnen(
 		schriftlicheNoten: number[],
@@ -41,17 +60,24 @@
 		gewichtungen?: (null | 1 | 2)[]
 	) {
 		let summe = schriftlicheNoten.reduce((prev, cur) => prev + cur, 0);
-		let divisor = schriftlicheNoten.filter((number) => number).length;
+		let divisor = schriftlicheNoten.length;
 
 		if (gewichtungen !== undefined) {
 			summe += muendlicheNoten.reduce((prev, cur, i) => prev + cur * Number(gewichtungen[i]), 0);
 			divisor += gewichtungen.reduce((prev, cur) => prev + Number(cur), 0);
 		} else {
 			summe += muendlicheNoten.reduce((prev, cur) => prev + cur, 0);
-			divisor += muendlicheNoten.filter((number) => number).length;
+			divisor += muendlicheNoten.length;
 		}
 
 		return summe / divisor;
+	}
+
+	function eingabeAuwerten(note: string) { 
+		note = note.replace(/^[\s+-]+|[\s+-]+$/g, ''); // Entfernt führende und nachfolgende Leerzeichen und Plus-/Minuszeichen
+		if (note.match(/^\d+$/)) {
+			return Number(note);
+		} else return undefined; // Gibt null zurück, wenn die Eingabe ungültig ist
 	}
 
 	function gewichtungText(gewichtung: null | 1 | 2) {
@@ -63,7 +89,20 @@
 
 <h1>WHG Günstigerprüfung LRS</h1>
 
-<small>Schulaufgabennoten nicht eingeben!</small>
+
+<div class="notensystem">
+	<label>
+		<input type="radio" bind:group={oberstufe} value={false} />
+		Notensystem 1-6
+	</label>
+	<label>
+		<input type="radio" bind:group={oberstufe} value={true} />
+		Punktesystem 0-15
+	</label>
+</div>
+
+<small>Schulaufgabennoten nicht eingeben!</small> <br />
+
 
 <div class="schriftlicheNoten">
 	Schriftliche kleine Leistungsnachweise: (Exen, Tests, ...) <br />
@@ -96,16 +135,18 @@
 
 <p>
 	<span class="schnittLabel">Schnitt der kleinen Leistungnachweise ohne Doppeltgewichtung:</span>
-		{originalSchnitt.toLocaleString(undefined, {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 2
-		})}
-	<br>
+	{originalSchnitt.toLocaleString(undefined, {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+		roundingMode: 'floor'
+	})}
+	<br />
 	<span class="schnittLabel">Schnitt der kleinen Leistungnachweise mit Günstigerprüfung:</span>
 	<b>
 		{schnitt.toLocaleString(undefined, {
 			minimumFractionDigits: 2,
-			maximumFractionDigits: 2
+			maximumFractionDigits: 2,
+			roundingMode: 'floor'
 		})}
 	</b>
 </p>
@@ -114,6 +155,15 @@
 	* {
 		font-family: sans-serif;
 	}
+
+	div.notensystem {
+		margin: 15px 0;
+	}
+
+	div.notensystem label {
+		margin-right: 20px;
+	}
+
 	td {
 		padding: 0;
 		text-align: center;
