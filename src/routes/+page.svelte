@@ -85,6 +85,11 @@
 		if (gewichtung == 1) return 'einfach';
 		return '';
 	}
+
+	function reset() {
+		schriftlicheNotenEingabe = Array(maxNumber);
+		muendlicheNotenEingabe = Array(maxNumber);
+	}
 </script>
 
 <h1>WHG Günstigerprüfung LRS</h1>
@@ -149,6 +154,10 @@
 			roundingMode: 'floor'
 		})}
 	</b>
+</p>
+
+<p>
+	<button onclick={reset}>Zurücksetzen</button>
 </p>
 
 <style>
